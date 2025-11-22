@@ -237,9 +237,9 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('\n╔════════════════════════════════════════════════════════════════╗');
   console.log('║         Order Execution Engine - Backend Server                ║');
   console.log('╚════════════════════════════════════════════════════════════════╝\n');
-  console.log(`✅ Server listening on http://localhost:${PORT}`);
-  console.log(`📍 API: POST http://localhost:${PORT}/api/orders/execute`);
-  console.log(`🔌 WebSocket: ws://localhost:${PORT}/api/orders/execute?orderId=<id>\n`);
+  console.log(`Server listening on http://localhost:${PORT}`);
+  console.log(`API: POST http://localhost:${PORT}/api/orders/execute`);
+  console.log(`WebSocket: ws://localhost:${PORT}/api/orders/execute?orderId=<id>\n`);
 });
 
 server.on('error', (err) => {

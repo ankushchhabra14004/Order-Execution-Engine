@@ -123,7 +123,7 @@
       <input id="numOrders" type="number" value="1" min="1" max="10">
     </div>
     
-    <button id="submitBtn">📤 Submit Order(s)</button>
+    <button id="submitBtn">Submit Order(s)</button>
     
     <div class="status-group">
       <div class="status-label">🔗 WebSocket</div>
@@ -131,7 +131,7 @@
     </div>
     
     <div class="status-group">
-      <div class="status-label">📊 Status</div>
+      <div class="status-label">Status</div>
       <div class="status-value" id="orderStatus">Ready</div>
     </div>
     
@@ -170,13 +170,13 @@ submitBtn.onclick = async () => {
   const numOrders = Number(document.getElementById('numOrders').value);
 
   if (!tokenIn || !tokenOut || !amountIn) {
-    log('❌ Please fill all fields');
+    log(' Please fill all fields');
     return;
   }
 
   submitBtn.disabled = true;
   activeOrders = numOrders;
-  log(`📋 Submitting ${numOrders} order(s)...`);
+  log(`Submitting ${numOrders} order(s)...`);
   updateOrderStatus(`Submitting ${numOrders} order(s)...`, 'pending');
 
   const promises = [];
@@ -206,22 +206,22 @@ async function submitOrder(tokenIn, tokenOut, amountIn, orderNum) {
 
     if (!res.ok) {
       const error = await res.text();
-      log(`Order ${orderNum}: ❌ FAILED - ${error}`);
+      log(`Order ${orderNum}: FAILED - ${error}`);
       activeOrders--;
       return;
     }
 
     const data = await res.json();
     if (data.error) {
-      log(`Order ${orderNum}: ❌ ERROR - ${data.error}`);
+      log(`Order ${orderNum}: ERROR - ${data.error}`);
       activeOrders--;
       return;
     }
 
-    log(`Order ${orderNum}: ✅ QUEUED - ID: ${data.orderId.substring(0, 16)}...`);
+    log(`Order ${orderNum}: QUEUED - ID: ${data.orderId.substring(0, 16)}...`);
     connectWS(data.wsUrl, orderNum);
   } catch (err) {
-    log(`Order ${orderNum}: ❌ EXCEPTION - ${err.message}`);
+    log(`Order ${orderNum}: EXCEPTION - ${err.message}`);
     activeOrders--;
   }
 }
@@ -233,7 +233,7 @@ function connectWS(url, orderNum) {
 
   ws.onopen = () => {
     updateWSState('Connected ✓', '#4caf50');
-    log(`🔌 Order ${orderNum} WebSocket connected`);
+    log(`Order ${orderNum} WebSocket connected`);
   };
 
   ws.onmessage = (evt) => {
@@ -246,7 +246,7 @@ function connectWS(url, orderNum) {
       if (payload.price) detail += ` @ $${payload.price}`;
       if (payload.txHash) detail += ` | TX: ${payload.txHash}`;
       if (payload.executedPrice) detail += ` | PRICE: $${payload.executedPrice}`;
-      if (payload.error) detail += ` ❌ ${payload.error}`;
+      if (payload.error) detail += ` ${payload.error}`;
 
       log(`Order ${orderNum}: ${detail}`);
       updateOrderStatus(`Order ${orderNum}: ${status.toUpperCase()}`, status);
@@ -260,23 +260,23 @@ function connectWS(url, orderNum) {
         }
       }
     } catch (e) {
-      log(`⚠️  Parse error: ${e.message}`);
+      log(` Parse error: ${e.message}`);
     }
   };
 
   ws.onclose = () => {
-    log(`🔌 Order ${orderNum} WebSocket closed`);
+    log(`Order ${orderNum} WebSocket closed`);
     activeOrders--;
     if (activeOrders === 0) updateWSState('Disconnected', '#999');
   };
 
   ws.onerror = (e) => {
-    log(`❌ Order ${orderNum} WebSocket error`);
+    log(` Order ${orderNum} WebSocket error`);
     updateWSState('Error', '#f44336');
   };
 }
 
-log('🚀 Frontend loaded. Ready to submit orders.');
+log('Frontend loaded. Ready to submit orders.');
 </script>
 </body>
 </html>

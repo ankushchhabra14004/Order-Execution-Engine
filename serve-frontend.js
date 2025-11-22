@@ -52,9 +52,9 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n✅ Frontend server listening on http://localhost:${PORT}\n`);
-  console.log(`📂 Serving files from: ${PUBLIC_DIR}\n`);
-  console.log('🌐 Open http://localhost:3001 in your browser\n');
+  console.log(`\Frontend server listening on http://localhost:${PORT}\n`);
+  console.log(`Serving files from: ${PUBLIC_DIR}\n`);
+  console.log('Open http://localhost:3001 in your browser\n');
 });
 
 server.on('error', (err) => {

@@ -74,7 +74,7 @@ async function main() {
     orderIds.map((id, i) => listenWebSocket(id, i + 1))
   );
 
-  console.log(`\n✅ Demo complete\n`);
+  console.log(`\nDemo complete\n`);
 }
 
 main().catch((err) => {
