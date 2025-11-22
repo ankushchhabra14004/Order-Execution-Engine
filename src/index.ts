@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import websocketPlugin from 'fastify-websocket';
+import websocketPlugin from '@fastify/websocket';
 import { v4 as uuidv4 } from 'uuid';
 import { addOrder } from './queue/orderQueue';
 import { initDb, saveOrder } from './db';
