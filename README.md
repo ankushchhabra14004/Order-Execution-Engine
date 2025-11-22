@@ -7,6 +7,17 @@ Overview:
 Why Market Order:
 - I implemented Market orders because they exercise immediate routing and execution logic (price comparison + slippage handling) and demonstrate the full lifecycle quickly. The same engine can be extended to Limit or Sniper by adding an order scheduler that watches prices or on-chain events and enqueues orders when criteria match.
 
+Order Submission
+- User submits an order via POST `/api/orders/execute`.
+- The API validates the order payload and returns an `orderId` and a websocket URL (`wsUrl`).
+- The same HTTP endpoint supports an upgrade to WebSocket for live updates; the client opens a WebSocket (or upgrades the same connection) to receive real-time status events for the returned `orderId`.
+
+Why this order type
+- Market orders were chosen because they exercise the full routing and execution flow immediately (quote collection, comparison, build, submit, confirm), which makes it easier to demonstrate and test end-to-end behavior.
+
+Extending to Limit / Sniper (1-2 lines)
+- The engine can support Limit orders by adding a scheduler that watches prices and enqueues a market execution when the target price is reached. Sniper orders can be implemented by subscribing to on-chain or mempool events and enqueueing aggressive market executions when a launch condition is detected.
+
 Quick Start (local, dev):
 1. Copy `.env.example` to `.env` and adjust `REDIS_URL` and `PG_CONN`.
 2. Install dependencies:
@@ -37,8 +48,3 @@ Files of Interest:
 - `src/workers/orderWorker.ts` – worker and exported `processOrder` function
 - `src/index.ts` – Fastify server + WS endpoint
 
-Tests:
-- Run `npm test` — includes unit tests for routing logic and lifecycle (>=10 tests included).
-
-Postman:
-- A sample collection `postman_collection.json` is included with a POST example.
