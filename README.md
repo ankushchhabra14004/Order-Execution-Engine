@@ -1,14 +1,13 @@
 # Order Execution Engine
 
-**Mock order execution engine for Solana DEX with BullMQ queue, PostgreSQL persistence, Redis caching, and real-time WebSocket updates.**
+**Simple, deployable order execution engine** — queue-based processing (BullMQ + Redis), PostgreSQL persistence, and a small frontend for submitting and tracking orders.
+
+Live demo: https://neon-selkie-418a5c.netlify.app/
 
 ## Architecture Overview
 
 ```
 ┌─────────────┐     ┌──────────┐     ┌──────────┐
-│  Frontend   │────▶│ HTTP/WS  │────▶│ BullMQ   │
-│ (WebSocket) │     │  Server  │     │  Queue   │
-└─────────────┘     └──────────┘     └──────────┘
                           │                 │
                           ▼                 ▼
                     ┌──────────┐     ┌────────────┐
