@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Execution Engine - Frontend</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 900px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 32px;
+    }
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+    }
+    h1 { font-size: 28px; color: #333; margin-bottom: 24px; grid-column: 1/-1; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    label { font-weight: 500; color: #555; font-size: 14px; }
+    input {
+      padding: 10px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    input:focus { outline: none; border-color: #667eea; }
+    button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      grid-column: 1/-1;
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .status-group {
+      padding: 16px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .status-label { color: #999; font-weight: 500; }
+    .status-value {
+      color: #333;
+      margin-top: 4px;
+      word-break: break-all;
+      font-family: 'Monaco', monospace;
+      font-size: 12px;
+    }
+    .status-value.success { color: #4caf50; }
+    .status-value.pending { color: #ff9800; }
+    .status-value.error { color: #f44336; }
+    #log {
+      grid-column: 1/-1;
+      background: #1a1a1a;
+      color: #00ff00;
+      padding: 16px;
+      border-radius: 6px;
+      font-family: 'Monaco', monospace;
+      font-size: 13px;
+      height: 320px;
+      overflow-y: auto;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    .badge.confirmed { background: #4caf50; color: white; }
+    .badge.pending { background: #ff9800; color: white; }
+    .badge.routing { background: #2196f3; color: white; }
+    .badge.failed { background: #f44336; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💱 Order Execution Engine</h1>
+    
+    <div class="form-group">
+      <label>Token In</label>
+      <input id="tokenIn" value="SOL" placeholder="e.g., SOL">
+    </div>
+    
+    <div class="form-group">
+      <label>Token Out</label>
+      <input id="tokenOut" value="USDC" placeholder="e.g., USDC">
+    </div>
+    
+    <div class="form-group">
+      <label>Amount In</label>
+      <input id="amountIn" type="number" value="100" min="1">
+    </div>
+    
+    <div class="form-group">
+      <label>Number of Concurrent Orders</label>
+      <input id="numOrders" type="number" value="1" min="1" max="10">
+    </div>
+    
+    <button id="submitBtn">📤 Submit Order(s)</button>
+    
+    <div class="status-group">
+      <div class="status-label">🔗 WebSocket</div>
+      <div class="status-value" id="wsState">Disconnected</div>
+    </div>
+    
+    <div class="status-group">
+      <div class="status-label">📊 Status</div>
+      <div class="status-value" id="orderStatus">Ready</div>
+    </div>
+    
+    <div id="log"></div>
+  </div>
+
+<script>
+const API_BASE = 'http://localhost:3000';
+const logEl = document.getElementById('log');
+const wsStateEl = document.getElementById('wsState');
+const orderStatusEl = document.getElementById('orderStatus');
+const submitBtn = document.getElementById('submitBtn');
+
+let activeOrders = 0;
+
+function log(msg) {
+  const timestamp = new Date().toLocaleTimeString();
+  logEl.textContent += `[${timestamp}] ${msg}\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function updateWSState(state, color = '#00ff00') {
+  wsStateEl.textContent = state;
+  wsStateEl.style.color = color;
+}
+
+function updateOrderStatus(msg, status = 'pending') {
+  orderStatusEl.textContent = msg;
+  orderStatusEl.className = `status-value ${status}`;
+}
+
+submitBtn.onclick = async () => {
+  const tokenIn = document.getElementById('tokenIn').value.trim();
+  const tokenOut = document.getElementById('tokenOut').value.trim();
+  const amountIn = Number(document.getElementById('amountIn').value);
+  const numOrders = Number(document.getElementById('numOrders').value);
+
+  if (!tokenIn || !tokenOut || !amountIn) {
+    log('❌ Please fill all fields');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  activeOrders = numOrders;
+  log(`📋 Submitting ${numOrders} order(s)...`);
+  updateOrderStatus(`Submitting ${numOrders} order(s)...`, 'pending');
+
+  const promises = [];
+  for (let i = 0; i < numOrders; i++) {
+    promises.push(submitOrder(tokenIn, tokenOut, amountIn, i + 1));
+  }
+
+  await Promise.all(promises);
+  submitBtn.disabled = false;
+};
+
+async function submitOrder(tokenIn, tokenOut, amountIn, orderNum) {
+  try {
+    const finalAmount = (amountIn + (Math.random() - 0.5) * 10).toFixed(2);
+    log(`Order ${orderNum}: Submitting ${finalAmount} ${tokenIn} → ${tokenOut}`);
+
+    const res = await fetch(`${API_BASE}/api/orders/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'market',
+        tokenIn,
+        tokenOut,
+        amountIn: parseFloat(finalAmount)
+      })
+    });
+
+    if (!res.ok) {
+      const error = await res.text();
+      log(`Order ${orderNum}: ❌ FAILED - ${error}`);
+      activeOrders--;
+      return;
+    }
+
+    const data = await res.json();
+    if (data.error) {
+      log(`Order ${orderNum}: ❌ ERROR - ${data.error}`);
+      activeOrders--;
+      return;
+    }
+
+    log(`Order ${orderNum}: ✅ QUEUED - ID: ${data.orderId.substring(0, 16)}...`);
+    connectWS(data.wsUrl, orderNum);
+  } catch (err) {
+    log(`Order ${orderNum}: ❌ EXCEPTION - ${err.message}`);
+    activeOrders--;
+  }
+}
+
+function connectWS(url, orderNum) {
+  updateWSState('Connecting...', '#ff9800');
+  const wsUrl = url.replace('http:', 'ws:').replace('https:', 'wss:');
+  const ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    updateWSState('Connected ✓', '#4caf50');
+    log(`🔌 Order ${orderNum} WebSocket connected`);
+  };
+
+  ws.onmessage = (evt) => {
+    try {
+      const payload = JSON.parse(evt.data);
+      const status = payload.status || '?';
+      let detail = `[${status.toUpperCase()}]`;
+
+      if (payload.chosen) detail += ` → DEX: ${payload.chosen}`;
+      if (payload.price) detail += ` @ $${payload.price}`;
+      if (payload.txHash) detail += ` | TX: ${payload.txHash}`;
+      if (payload.executedPrice) detail += ` | PRICE: $${payload.executedPrice}`;
+      if (payload.error) detail += ` ❌ ${payload.error}`;
+
+      log(`Order ${orderNum}: ${detail}`);
+      updateOrderStatus(`Order ${orderNum}: ${status.toUpperCase()}`, status);
+
+      if (status === 'confirmed' || status === 'failed') {
+        activeOrders--;
+        if (activeOrders === 0) {
+          log('All orders completed!');
+          updateOrderStatus('All orders completed', 'success');
+          updateWSState('Idle', '#999');
+        }
+      }
+    } catch (e) {
+      log(`⚠️  Parse error: ${e.message}`);
+    }
+  };
+
+  ws.onclose = () => {
+    log(`🔌 Order ${orderNum} WebSocket closed`);
+    activeOrders--;
+    if (activeOrders === 0) updateWSState('Disconnected', '#999');
+  };
+
+  ws.onerror = (e) => {
+    log(`❌ Order ${orderNum} WebSocket error`);
+    updateWSState('Error', '#f44336');
+  };
+}
+
+log('🚀 Frontend loaded. Ready to submit orders.');
+</script>
+</body>
+</html>
