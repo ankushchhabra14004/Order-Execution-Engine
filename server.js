@@ -17,6 +17,8 @@ require('dotenv').config();
 const http = require('http');
 const url = require('url');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { Queue } = require('bullmq');
 const redis = require('./lib/redis-client');
 const db = require('./lib/db-client');
@@ -58,6 +60,21 @@ const server = http.createServer((req, res) => {
 
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
+
+  // ===== STATIC FILES (Frontend) =====
+  if (pathname === '/' || pathname === '/index.html') {
+    const filePath = path.join(__dirname, 'public', 'index.html');
+    fs.readFile(filePath, 'utf-8', (err, content) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Frontend not found' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(content);
+    });
+    return;
+  }
 
   // ===== GET /api/orders - List orders =====
   if (pathname === '/api/orders' && req.method === 'GET') {
