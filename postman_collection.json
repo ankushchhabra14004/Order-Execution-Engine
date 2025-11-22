@@ -1,0 +1,200 @@
+{
+  "info": {
+    "name": "Order Execution Engine API",
+    "description": "Complete API collection for Order Execution Engine with BullMQ, PostgreSQL, and Redis",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Submit Market Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Response has orderId', function() { pm.expect(pm.response.json().orderId).to.exist; });",
+                  "pm.test('Response has wsUrl', function() { pm.expect(pm.response.json().wsUrl).to.include('ws://'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"type\": \"market\", \"tokenIn\": \"SOL\", \"tokenOut\": \"USDC\", \"amountIn\": 100}"},
+            "url": {"raw": "http://localhost:3000/api/orders/execute", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders", "execute"]}
+          }
+        },
+        {
+          "name": "Submit Large Order",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"type\": \"market\", \"tokenIn\": \"SOL\", \"tokenOut\": \"USDC\", \"amountIn\": 10000}"},
+            "url": {"raw": "http://localhost:3000/api/orders/execute", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders", "execute"]}
+          }
+        },
+        {
+          "name": "Submit ETH/USDT Order",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"type\": \"market\", \"tokenIn\": \"ETH\", \"tokenOut\": \"USDT\", \"amountIn\": 50}"},
+            "url": {"raw": "http://localhost:3000/api/orders/execute", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders", "execute"]}
+          }
+        },
+        {
+          "name": "Submit BTC/USDC Order",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"type\": \"market\", \"tokenIn\": \"BTC\", \"tokenOut\": \"USDC\", \"amountIn\": 1}"},
+            "url": {"raw": "http://localhost:3000/api/orders/execute", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders", "execute"]}
+          }
+        },
+        {
+          "name": "List Pending Orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Response has orders array', function() { pm.expect(pm.response.json().orders).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "http://localhost:3000/api/orders?status=pending", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders"], "query": [{"key": "status", "value": "pending"}]}
+          }
+        },
+        {
+          "name": "List Confirmed Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "http://localhost:3000/api/orders?status=confirmed", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders"], "query": [{"key": "status", "value": "confirmed"}]}
+          }
+        },
+        {
+          "name": "Get Order Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 404', function() { pm.expect([200, 404]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "http://localhost:3000/api/orders/{{orderId}}", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders", "{{orderId}}"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Get System Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Has activeOrders field', function() { pm.expect(pm.response.json().activeOrders).to.exist; });",
+                  "pm.test('Has queuedJobs field', function() { pm.expect(pm.response.json().queuedJobs).to.exist; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "http://localhost:3000/api/stats", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "stats"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Cases",
+      "item": [
+        {
+          "name": "Invalid Order Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function() { pm.response.to.have.status(400); });",
+                  "pm.test('Has error message', function() { pm.expect(pm.response.json().error).to.exist; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"type\": \"limit\", \"tokenIn\": \"SOL\", \"tokenOut\": \"USDC\", \"amountIn\": 100}"},
+            "url": {"raw": "http://localhost:3000/api/orders/execute", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders", "execute"]}
+          }
+        },
+        {
+          "name": "Missing Required Field (tokenIn)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"type\": \"market\", \"tokenOut\": \"USDC\", \"amountIn\": 100}"},
+            "url": {"raw": "http://localhost:3000/api/orders/execute", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders", "execute"]}
+          }
+        },
+        {
+          "name": "Missing Required Field (amountIn)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"type\": \"market\", \"tokenIn\": \"SOL\", \"tokenOut\": \"USDC\"}"},
+            "url": {"raw": "http://localhost:3000/api/orders/execute", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders", "execute"]}
+          }
+        },
+        {
+          "name": "Non-existent Order ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function() { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "http://localhost:3000/api/orders/non-existent", "protocol": "http", "host": ["localhost"], "port": "3000", "path": ["api", "orders", "non-existent"]}
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "orderId",
+      "value": "your-order-id-here",
+      "type": "string"
+    }
+  ]
+}
