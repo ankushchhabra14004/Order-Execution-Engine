@@ -143,11 +143,6 @@ const server = http.createServer((req, res) => {
         }
 
         const orderId = uuidv4();
-        // Use request host for WebSocket URL (works on both localhost and production)
-        const host = req.headers.host;
-        const protocol = req.headers['x-forwarded-proto'] || 'http';
-        const wsProtocol = protocol === 'https' ? 'wss' : 'ws';
-        const wsUrl = `${wsProtocol}://${host}/api/orders/execute?orderId=${orderId}`;
         const shortId = orderId.substring(0, 12);
 
         console.log(`\n📥 NEW ORDER [${shortId}]`);
@@ -178,7 +173,7 @@ const server = http.createServer((req, res) => {
         console.log(`   ✅ Enqueued to queue`);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ orderId, wsUrl }));
+        res.end(JSON.stringify({ orderId }));
       } catch (err) {
         console.error('❌ Order submission error:', err.message);
         res.writeHead(400, { 'Content-Type': 'application/json' });

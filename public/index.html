@@ -208,9 +208,9 @@ async function submitOrder(tokenIn, tokenOut, amountIn, num) {
       return;
     }
 
-    // Order successfully queued - show orderId and connect WebSocket
+    // Order successfully queued - show orderId and poll for status
     log(`Order #${num}: ✓ QUEUED (${data.orderId.substring(0, 12)}...)`);
-    connectWS(data.wsUrl, num);
+    pollOrderStatus(data.orderId, num);
   } catch (err) {
     log(`Order #${num}: ❌ ${err.message}`);
   }
@@ -219,67 +219,65 @@ async function submitOrder(tokenIn, tokenOut, amountIn, num) {
 // ========== WEBSOCKET COMMUNICATION ==========
 
 /**
- * Connect to WebSocket for real-time order status updates
+ * Poll order status from backend API
+ * Fetches order details at regular intervals until completion
  * 
- * Lifecycle:
- * - onopen: Connection established
- * - onmessage: Receive status updates (pending → routing → building → submitted → confirmed)
- * - onerror: Connection failed
- * - onclose: Connection closed after order completes or error
- * 
- * @param {string} url - WebSocket URL provided by backend
+ * @param {string} orderId - Order ID to poll
  * @param {number} num - Order number for logging
  */
-function connectWS(url, num) {
-  // Convert HTTP URL to WebSocket URL
-  const wsUrl = url.replace('http:', 'ws:').replace('https:', 'wss:');
-  
-  // Create WebSocket connection
-  const ws = new WebSocket(wsUrl);
+async function pollOrderStatus(orderId, num) {
+  let lastStatus = 'pending';
+  let pollCount = 0;
+  const maxPolls = 100; // Stop after 100 polls (5 minutes at 3s intervals)
 
-  /**
-   * Connection opened - WebSocket handshake complete
-   */
-  ws.onopen = () => {
-    log(`Order #${num}: 🔗 Connected`);
-  };
+  const poll = async () => {
+    pollCount++;
+    if (pollCount > maxPolls) {
+      log(`Order #${num}: ⏱️  Timeout (no update after 5 minutes)`);
+      return;
+    }
 
-  /**
-   * Receive status update from backend
-   * Formats message with status, DEX choice, prices, and transaction info
-   */
-  ws.onmessage = (evt) => {
     try {
-      // Parse JSON status update
-      const p = JSON.parse(evt.data);
+      const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
+      if (!res.ok) return; // Retry on error
       
-      // Build formatted message with available fields
-      let msg = `[${p.status?.toUpperCase() || '?'}]`;
-      if (p.chosen) msg += ` → ${p.chosen}`;           // DEX choice
-      if (p.price) msg += ` $${p.price}`;              // Quote price
-      if (p.executedPrice) msg += ` ✓$${p.executedPrice}`; // Final execution price
-      if (p.txHash) msg += ` ${p.txHash}`;             // Transaction hash
-      if (p.error) msg += ` ❌${p.error}`;             // Error message
+      const order = await res.json();
       
-      log(`Order #${num}: ${msg}`);
+      // Only log if status changed
+      if (order.status !== lastStatus || pollCount === 1) {
+        lastStatus = order.status;
+        
+        let msg = `[${order.status?.toUpperCase() || '?'}]`;
+        if (order.dex_chosen) msg += ` → ${order.dex_chosen}`;
+        if (order.quote_price) msg += ` $${order.quote_price}`;
+        if (order.executed_price) msg += ` ✓$${order.executed_price}`;
+        if (order.tx_hash) msg += ` ${order.tx_hash}`;
+        if (order.last_error) msg += ` ❌${order.last_error}`;
+        
+        log(`Order #${num}: ${msg}`);
+      }
 
-      // Close connection after order reaches terminal state
-      if (p.status === 'confirmed' || p.status === 'failed') ws.close();
+      // Continue polling until terminal state
+      if (order.status === 'confirmed' || order.status === 'failed') {
+        log(`Order #${num}: ✅ Complete`);
+        return;
+      }
+
+      // Poll again in 3 seconds
+      setTimeout(poll, 3000);
     } catch (e) {
-      log(`Order #${num}: ⚠️  Parse error`);
+      log(`Order #${num}: ⚠️  Poll error: ${e.message}`);
+      setTimeout(poll, 3000); // Retry after delay
     }
   };
 
-  /**
-   * WebSocket connection error
-   */
-  ws.onerror = () => log(`Order #${num}: ⚠️  Connection error`);
-
-  /**
-   * WebSocket connection closed
-   */
-  ws.onclose = () => log(`Order #${num}: 🔌 Disconnected`);
+  poll();
 }
+</script>
+</body>
+</html>
+
+```
 </script>
 </body>
 </html>
